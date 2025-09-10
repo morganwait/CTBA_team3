@@ -6,5 +6,4 @@ plotly
 dash-bootstrap-components
 datetime
 requests
-pathlib
 gunicorn
