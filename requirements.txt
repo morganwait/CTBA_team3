@@ -7,3 +7,4 @@ dash-bootstrap-components
 datetime
 requests
 pathlib
+gunicorn
