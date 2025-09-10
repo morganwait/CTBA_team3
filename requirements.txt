@@ -6,3 +6,4 @@ plotly
 dash-bootstrap-components
 requests
 gunicorn
+setuptools==69.5.1
