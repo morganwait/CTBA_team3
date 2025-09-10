@@ -7,67 +7,93 @@ import numpy as np
 # Register page
 register_page(__name__, path="/page3", name="Extreme Weather")
 
-# Define regions and colors
+# Define regions
 regions_info = {
     "Virginia Beach": {"lat": 36.85, "lon": -75.98, "population": 450000},
     "Arlington": {"lat": 38.88, "lon": -77.10, "population": 240000},
     "Richmond": {"lat": 37.54, "lon": -77.43, "population": 230000},
     "Norfolk": {"lat": 36.85, "lon": -76.29, "population": 245000},
 }
+
 region_colors = ["#113E14", "#1A5B07", "#2C5C99", "#99B7F0"]
 
-# Layout function
-def layout():
-    return html.Div([
-        html.H1("Extreme Heat & Public Health", style={'textAlign': 'center', 'marginBottom': '30px'}),
+# Generate sample data
+all_years = range(2020, 2026)
+data = []
+for year in all_years:
+    year_dates = pd.date_range(f"{year}-01-01", f"{year}-12-31")
+    for region, info in regions_info.items():
+        for date in year_dates:
+            data.append({
+                "Date": date,
+                "Year": year,
+                "Month": date.month,
+                "Region": region,
+                "MaxTemp": np.random.randint(35, 45),
+                "HeatCases": np.random.randint(5, 50),
+                "Population": info["population"],
+                "Latitude": info["lat"],
+                "Longitude": info["lon"]
+            })
 
+df = pd.DataFrame(data)
+
+# Layout
+layout = html.Div([
+    html.H1("Extreme Heat & Public Health",
+            style={'textAlign': 'center', 'marginBottom': '30px'}),
+
+    html.Div([
+        # Sidebar
         html.Div([
+            html.H3("Filter Regions & Year"),
+            html.Hr(),
+
+            html.Label("Regions:"),
+            dcc.Checklist(
+                id='region-checklist',
+                options=[{"label": r, "value": r} for r in regions_info.keys()],
+                value=list(regions_info.keys()),
+                labelStyle={'display': 'block', 'marginBottom': '5px', 'color': 'white'}
+            ),
+
+            html.Label("Year:"),
+            dcc.Slider(
+                id='year-slider',
+                min=2020,
+                max=2025,
+                step=1,
+                marks={year: str(year) for year in all_years},
+                value=2025
+            ),
+        ], className="page3-sidebar"),
+
+        # Content
+        html.Div([
+            html.Div(id='kpi-container', className="page3-kpi"),
+
             html.Div([
-                html.H3("Filter Regions & Year"),
-                html.Hr(),
-
-                html.Label("Regions:"),
-                dcc.Checklist(
-                    id='region-checklist',
-                    options=[{"label": r, "value": r} for r in regions_info.keys()],
-                    value=list(regions_info.keys()),
-                    labelStyle={'display': 'block', 'marginBottom': '5px', 'color': 'white'}
-                ),
-
-                html.Label("Year:"),
-                dcc.Slider(
-                    id='year-slider',
-                    min=2020,
-                    max=2025,
-                    step=1,
-                    marks={year: str(year) for year in range(2020, 2026)},
-                    value=2025
-                ),
-            ], className="page3-sidebar"),
-
-            html.Div([
-                html.Div(id='kpi-container', className="page3-kpi"),
+                dcc.Graph(id='health-bar-chart', style={'width': '80%', 'display': 'inline-block'}),
 
                 html.Div([
-                    dcc.Graph(id='health-bar-chart', style={'width': '80%', 'display': 'inline-block'}),
-                    html.Div([
-                        html.Label("Select Months:", style={'color': 'white', 'fontWeight': 'bold'}),
-                        dcc.Checklist(
-                            id='month-checklist',
-                            options=[{"label": pd.to_datetime(f"2020-{m}-01").strftime("%B"), "value": m} for m in range(1, 13)],
-                            value=[6],
-                            labelStyle={'display': 'flex', 'alignItems': 'center', 'color': 'white', 'marginBottom': '5px'}
-                        )
-                    ], style={'width': '18%', 'display': 'inline-block', 'verticalAlign': 'top', 'marginLeft': '2%'})
-                ]),
+                    html.Label("Select Months:", style={'color': 'white', 'fontWeight': 'bold'}),
+                    dcc.Checklist(
+                        id='month-checklist',
+                        options=[{"label": pd.to_datetime(f"2020-{m}-01").strftime("%B"), "value": m} for m in range(1, 13)],
+                        value=[6],  # default June
+                        labelStyle={'display': 'flex', 'alignItems': 'center', 'color': 'white', 'marginBottom': '5px'}
+                    )
+                ], style={'width': '18%', 'display': 'inline-block', 'verticalAlign': 'top', 'marginLeft': '2%'})
+            ]),
 
-                html.Div(dcc.Graph(id='heat-map'), className="map-box")
-            ], className="page3-content")
-        ])
-    ], className="page3-container")
+            html.Div(
+                dcc.Graph(id='heat-map'),
+                className="map-box"
+            )
+        ], className="page3-content")
+    ])
+], className="page3-container")
 
-# Assign layout
-layout = layout
 
 # Callback
 @dash.callback(
@@ -79,26 +105,6 @@ layout = layout
      Input('month-checklist', 'value')]
 )
 def update_dashboard(selected_regions, selected_year, selected_months):
-    # Regenerate data inside callback
-    all_years = range(2020, 2026)
-    data = []
-    for year in all_years:
-        year_dates = pd.date_range(f"{year}-01-01", f"{year}-12-31")
-        for region, info in regions_info.items():
-            for date in year_dates:
-                data.append({
-                    "Date": date,
-                    "Year": year,
-                    "Month": date.month,
-                    "Region": region,
-                    "MaxTemp": np.random.randint(35, 45),
-                    "HeatCases": np.random.randint(5, 50),
-                    "Population": info["population"],
-                    "Latitude": info["lat"],
-                    "Longitude": info["lon"]
-                })
-    df = pd.DataFrame(data)
-
     if not selected_months:
         return px.scatter(), px.scatter(), []
 
@@ -111,13 +117,14 @@ def update_dashboard(selected_regions, selected_year, selected_months):
     if filtered_df.empty:
         return px.scatter(), px.scatter(), []
 
-    # Bar chart
+    # Aggregate data by Region and Month
     month_region_df = filtered_df.groupby(['Month', 'Region'], as_index=False).agg({
         'HeatCases': 'sum',
         'MaxTemp': 'mean'
     })
     month_region_df['MonthName'] = month_region_df['Month'].apply(lambda m: pd.to_datetime(f"2020-{m}-01").strftime("%B"))
 
+    # Bar chart: x = month, y = HeatCases, color = Region
     health_fig = px.bar(
         month_region_df,
         x='MonthName',
@@ -129,7 +136,7 @@ def update_dashboard(selected_regions, selected_year, selected_months):
     )
     health_fig.update_layout(title_x=0.5, font=dict(size=14), legend_title='Region')
 
-    # Map
+    # Map: show city positions
     city_df = filtered_df.groupby('Region', as_index=False).agg({
         'HeatCases': 'sum',
         'MaxTemp': 'mean',
@@ -149,7 +156,8 @@ def update_dashboard(selected_regions, selected_year, selected_months):
         zoom=6,
         color_discrete_sequence=region_colors
     )
-    map_fig.update_layout(mapbox_style="open-street-map", margin={"r": 0, "t": 0, "l": 0, "b": 0})
+    map_fig.update_layout(mapbox_style="open-street-map",
+                          margin={"r": 0, "t": 0, "l": 0, "b": 0})
 
     # KPIs
     avg_temp = round(filtered_df['MaxTemp'].mean(), 1)
