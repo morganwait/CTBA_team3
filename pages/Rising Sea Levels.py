@@ -164,7 +164,7 @@ df_long.head()
  
 
 
-fig = px.scatter_map(
+fig = px.scatter_mapbox(
     df_long,
     lat="Lat",
     lon="Lon",
@@ -243,3 +243,4 @@ def update_line_chart(selected_location):
     
 
     return fig
+
